@@ -12,14 +12,16 @@ Only mark an item complete after its output has been verified. Use PLAN.md as th
 
 - [x] Import upstream source and record its exact commit; preserve the complete MIT license and copyright notices.
 - [x] Create the GitHub fork, configure `origin`/`upstream`, and prepare `feat/linux-support`.
-- [ ] Audit macOS-specific commands, paths, modules, window configuration, and build scripts.
-- [ ] Establish Linux build dependencies and configuration without invoking the macOS setup script.
-- [ ] Launch the desktop shell on Pop!_OS 22.04 and record verified setup/build commands in README.md.
-- [ ] Disable deferred modules in the Linux UI and backend registration.
+- [x] Audit macOS-specific commands, paths, modules, window configuration, and build scripts (LINUX-AUDIT.md).
+- [x] Add Linux build configuration and a read-only prerequisite checker without invoking the macOS setup script.
+- [x] Install missing native development libraries and verify the Linux build (owner installed system dependencies).
+- [x] Launch the desktop shell on Pop!_OS 22.04 and record verified setup/build commands in README.md.
+- [x] Disable deferred modules in the Linux UI and backend registration.
 
 ## 2. Backend boundaries and permissions
 
-- [ ] Add platform capability discovery and typed service/package adapters, retaining platform-selected macOS implementations.
+- [x] Add platform capability discovery and isolate existing macOS startup/command registration.
+- [ ] Add typed service/package adapters, retaining platform-selected macOS implementations.
 - [ ] Align frontend types and terminology with the Linux adapters.
 - [ ] Implement and validate the root-owned helper and polkit policy for allowed administrator operations.
 - [ ] Verify invalid requests and canceled authentication cause no mutation in a disposable environment.
@@ -28,9 +30,11 @@ Only mark an item complete after its output has been verified. Use PLAN.md as th
 
 - [ ] Implement system/user service discovery and explicit start, stop, and restart actions.
 - [ ] Show accurate unit states, optional metrics, and unknown application health honestly.
-- [ ] Implement Linux listening-port/process discovery and permission-limited states.
+- [x] Establish read-only Linux TCP listening-port/process discovery with an explicit visibility limitation.
+- [ ] Extend port discovery with detailed permission-limited states and any additional protocol support required for release.
 - [ ] Add validated process termination, explicit force kill, and identity checks.
-- [ ] Verify these flows using disposable user services and test listeners.
+- [x] Verify read-only discovery using a disposable local TCP listener.
+- [ ] Verify service actions using disposable user services and process controls using test listeners.
 
 ## 4. Packages
 
@@ -50,8 +54,8 @@ Only mark an item complete after its output has been verified. Use PLAN.md as th
 ## 6. Validation and delivery
 
 - [ ] Add meaningful parser, validation, permissions, transaction, and failure-path tests.
-- [ ] Run TypeScript checks, frontend tests, Rust tests, and Clippy.
-- [ ] Add Linux CI and retain upstream macOS validation where available.
+- [x] Run TypeScript checks, frontend tests, Rust tests, and Clippy for the initial Linux foundation; rerun affected checks for subsequent features.
+- [x] Configure Linux CI and retain upstream macOS validation; remote results remain to be verified.
 - [ ] Build a `.deb` containing the protected helper and polkit policy.
 - [ ] Verify clean install, launch, removal, and desktop behavior on supported environments.
 - [ ] Publish accurate setup instructions, tested compatibility, and known limitations in README.md.

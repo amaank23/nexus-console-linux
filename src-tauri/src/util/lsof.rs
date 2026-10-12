@@ -1,9 +1,11 @@
+#[cfg(any(target_os = "macos", test))]
 use std::collections::HashMap;
 
 /// Parse `lsof -nP -iTCP -sTCP:LISTEN -a -p <pids>` → pid → first listening port
 /// (the REAL port, not a guessed default). Columns:
 ///   `COMMAND PID USER FD TYPE DEVICE SIZE/OFF NODE NAME`
 /// where NAME is `127.0.0.1:6379` or `[::1]:6379` (port after the last ':').
+#[cfg(any(target_os = "macos", test))]
 pub fn parse_listening_ports(out: &str) -> HashMap<u32, u16> {
     let mut map = HashMap::new();
     for line in out.lines() {

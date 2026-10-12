@@ -9,8 +9,9 @@
     "node": ">=22.12"
   },
   "scripts": {
-    "setup": "sh scripts/setup.sh",
-    "setup:check": "sh scripts/setup.sh --check",
+    "setup": "sh scripts/setup-platform.sh",
+    "setup:check": "sh scripts/setup-platform.sh --check",
+    "setup:linux": "sh scripts/setup-linux.sh --check",
     "start": "tauri dev",
     "release": "tauri build",
     "dev": "vite",

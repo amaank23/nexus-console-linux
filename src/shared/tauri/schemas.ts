@@ -8,6 +8,7 @@ export const appContextSchema = z.object({
   brewPrefix: z.string().nullable(),
   brewBin: z.string().nullable(),
   brewVersion: z.string().nullable(),
+  supportedModules: z.array(z.string()),
 });
 export type AppContext = z.infer<typeof appContextSchema>;
 

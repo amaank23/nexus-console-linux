@@ -4,6 +4,7 @@ use std::collections::HashMap;
 pub struct PsSample {
     pub cpu: f64,
     pub rss_bytes: u64,
+    #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
     pub uptime_secs: u64,
 }
 

@@ -6,7 +6,9 @@ This project adapts [xDAnkit/Nexus-Console](https://github.com/xDAnkit/Nexus-Con
 
 ## Current status
 
-Fork and documentation setup complete. Upstream source has been imported, but Linux functionality has not been implemented or validated. Dependencies have not been installed. The imported app still targets macOS.
+The initial Linux desktop foundation is implemented: platform-specific build configuration, capability-based navigation, read-only TCP port inspection, a generic terminal, and Settings. macOS integrations are isolated from Linux startup and command registration.
+
+The app builds and launches on Pop!_OS 22.04. Frontend checks, native compilation, Rust tests, and Clippy pass. Service/package controls, process termination, and Linux tray integration are still pending.
 
 ## First release
 
@@ -32,13 +34,51 @@ The app will keep settings and operation history locally, without accounts, tele
 
 ## Development setup
 
-Linux setup and build commands are pending verification. Do not treat upstream macOS setup scripts as Linux instructions.
+Use Node >= 22.12 and Rust through rustup. This workspace was checked with its already-installed Node 24.15.0; the machine's default Node 20 does not meet the project's requirement.
+
+```bash
+nvm use 24             # if you use nvm and already have Node 24 installed
+npm run setup:linux    # read-only prerequisite check; installs nothing
+```
+
+If the check reports missing native libraries, install the following explicitly:
+
+```bash
+sudo apt-get update
+sudo apt-get install build-essential pkg-config libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev libxdo-dev libssl-dev librsvg2-dev lsof
+```
+
+Then:
+
+```bash
+npm ci
+npm run typecheck
+npm run lint
+npm test
+npm run build          # frontend build only
+npm start              # native desktop development; verified on Pop!_OS 22.04
+```
+
+Native verification after installing the prerequisites:
+
+```bash
+cargo test --locked --manifest-path src-tauri/Cargo.toml
+cargo clippy --locked --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
+npm run release       # Linux .deb build; pending local verification
+```
+
+`npm run setup` selects the read-only Linux checker on Linux. Do not run `scripts/setup.sh` directly there; it is the original macOS installer. Browser-only Vite development does not provide Rust operations.
+
+Verified locally: TypeScript, lint, formatting, 50 frontend tests, production frontend build, native `cargo check`, 13 standard Rust tests, Clippy with warnings denied, and separate disposable-listener and PTY smoke tests. The native window displays live TCP ports and Linux Settings; full interactive terminal/lifecycle QA and `.deb` packaging remain separate release checks.
+
+On Linux, Control replaces Command for navigation shortcuts. Use `Ctrl+1`/`Ctrl+2` for the visible tabs, `Ctrl+,` for Settings, and Control + backtick or the sidebar button to open the terminal.
 
 ## Project documents
 
 - [AGENTS.md](AGENTS.md): development conventions and agent instructions.
 - [PLAN.md](PLAN.md): agreed architecture, behavior, and release criteria.
 - [TASKS.md](TASKS.md): phased implementation checklist.
+- [LINUX-AUDIT.md](LINUX-AUDIT.md): platform assumptions, adaptations, and current limitations.
 
 ## Upstream attribution
 

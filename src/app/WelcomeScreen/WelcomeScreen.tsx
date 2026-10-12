@@ -5,7 +5,7 @@ import {
   ALL_MODULES,
   MODULES,
   availableModules,
-  useClaudeInstalled,
+  useModuleDependencies,
   visibleTabs,
   type ModuleId,
 } from '@/shared/modules';
@@ -25,11 +25,10 @@ import { PRESETS } from './WelcomeScreen.config';
  * the full app; the screen is about opting OUT of what you won't use. */
 export const WelcomeScreen = () => {
   const dispatch = useAppDispatch();
-  const claudeInstalled = useClaudeInstalled();
+  const deps = useModuleDependencies();
+  const offeredModules = MODULES.filter((m) => deps.supportedModules.includes(m.id));
   const reduce = useReducedMotion();
-  const [selected, setSelected] = useState<ModuleId[]>(() =>
-    availableModules(ALL_MODULES, { claudeInstalled }),
-  );
+  const [selected, setSelected] = useState<ModuleId[]>(() => availableModules(ALL_MODULES, deps));
 
   const confirm = () => {
     dispatch(setEnabledModules(selected));
@@ -47,9 +46,9 @@ export const WelcomeScreen = () => {
         return;
       }
       const nth = Number(e.key);
-      if (!Number.isInteger(nth) || nth < 1 || nth > MODULES.length) return;
-      const id = MODULES[nth - 1].id;
-      if (!availableModules([id], { claudeInstalled }).length) return;
+      if (!Number.isInteger(nth) || nth < 1 || nth > offeredModules.length) return;
+      const id = offeredModules[nth - 1].id;
+      if (!availableModules([id], deps).length) return;
       setSelected((prev) => {
         const next = prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id];
         return next.length > 0 ? next : prev; // last one can't go
@@ -89,18 +88,16 @@ export const WelcomeScreen = () => {
         </motion.header>
 
         <motion.div {...rise(0.06)} className="flex flex-wrap gap-2">
-          {PRESETS.filter((p) => availableModules(p.modules, { claudeInstalled }).length > 0).map(
-            (p) => (
-              <button
-                key={p.label}
-                type="button"
-                onClick={() => setSelected(availableModules(p.modules, { claudeInstalled }))}
-                className="rounded-md border border-border bg-paper px-2.5 py-1.5 text-xs font-medium text-fg-muted transition-colors hover:bg-list hover:text-fg focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
-              >
-                {p.label}
-              </button>
-            ),
-          )}
+          {PRESETS.filter((p) => availableModules(p.modules, deps).length > 0).map((p) => (
+            <button
+              key={p.label}
+              type="button"
+              onClick={() => setSelected(availableModules(p.modules, deps))}
+              className="rounded-md border border-border bg-paper px-2.5 py-1.5 text-xs font-medium text-fg-muted transition-colors hover:bg-list hover:text-fg focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
+            >
+              {p.label}
+            </button>
+          ))}
         </motion.div>
 
         <motion.div {...rise(0.12)} className="flex flex-col gap-2">
@@ -109,7 +106,8 @@ export const WelcomeScreen = () => {
 
         <motion.footer {...rise(0.18)} className="flex items-center justify-between gap-4">
           <p className="text-xs text-fg-subtle">
-            {MODULES.length > 0 && `1–${MODULES.length} to toggle · Enter to continue`}
+            {offeredModules.length > 0 &&
+              `1–${offeredModules.length} to toggle · Enter to continue`}
           </p>
           <Button onClick={confirm}>Continue</Button>
         </motion.footer>

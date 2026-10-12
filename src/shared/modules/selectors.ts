@@ -24,16 +24,30 @@ export function isTabVisible(tab: Tab, enabled: ModuleId[]): boolean {
 
 /** Does this Mac have what the module needs? See ModuleRequirement for why only
  * Claude Code counts. */
-export function isModuleAvailable(id: ModuleId, deps: { claudeInstalled: boolean }): boolean {
+export interface ModuleDependencies {
+  claudeInstalled: boolean;
+  supportedModules?: readonly string[];
+}
+
+export function isModuleAvailable(id: ModuleId, deps: ModuleDependencies): boolean {
+  if (deps.supportedModules && !deps.supportedModules.includes(id)) return false;
   return MODULES.find((m) => m.id === id)?.requires === 'claude' ? deps.claudeInstalled : true;
 }
 
 /** Enabled AND available — what the sidebar and the router go by. */
-export function availableModules(
-  enabled: ModuleId[],
-  deps: { claudeInstalled: boolean },
-): ModuleId[] {
+export function availableModules(enabled: ModuleId[], deps: ModuleDependencies): ModuleId[] {
   return enabled.filter((id) => isModuleAvailable(id, deps));
+}
+
+/** Recover a persisted choice from another platform without re-enabling modules
+ * merely because an optional tool (such as Claude) is missing. */
+export function effectiveModules(enabled: ModuleId[], deps: ModuleDependencies): ModuleId[] {
+  const supported = deps.supportedModules;
+  const compatible = supported ? enabled.filter((id) => supported.includes(id)) : enabled;
+  return availableModules(
+    compatible.length > 0 ? compatible : supported ? ALL_MODULES : enabled,
+    deps,
+  );
 }
 
 /** Normalize the module list read off disk. `settings.json` is user-editable, so

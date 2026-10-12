@@ -6,18 +6,23 @@ import { FeaturePicker } from '@/features/settings/components/FeaturePicker';
 import { HomebrewStatusCard } from '@/features/settings/components/HomebrewStatusCard';
 import { ManagedServicesEditor } from '@/features/settings/components/ManagedServicesEditor';
 import { THEME_OPTIONS, LAYOUT_OPTIONS } from './SettingsPage.config';
+import { useAppContext } from '@/shared/tauri';
 
 export const SettingsPage = () => {
   const dispatch = useAppDispatch();
   const theme = useAppSelector((s) => s.settings.theme);
   const layout = useAppSelector((s) => s.settings.layout);
   const enabledModules = useEnabledModules();
+  const { data: context } = useAppContext();
+  const isLinux = context?.platform === 'linux';
 
   return (
     <div className="flex h-full flex-col">
       <header className="border-b border-border px-6 py-4">
         <h1 className="text-lg font-semibold text-fg">Settings</h1>
-        <p className="text-sm text-fg-muted">Features, theme, Homebrew &amp; managed services</p>
+        <p className="text-sm text-fg-muted">
+          {isLinux ? 'Features and appearance' : 'Features, theme, Homebrew & managed services'}
+        </p>
       </header>
 
       <div className="min-h-0 flex-1 overflow-auto">
@@ -29,8 +34,9 @@ export const SettingsPage = () => {
           <section className="rounded-xl border border-border bg-paper p-5 xl:col-span-2">
             <h2 className="text-base font-semibold text-fg">Features</h2>
             <p className="mt-1 mb-4 text-xs text-fg-muted">
-              Turning a feature off stops its background work right away. Your data stays — managed
-              services, archives and history are untouched.
+              {isLinux
+                ? 'Ports and the terminal are available. Service and package management are coming in a later update.'
+                : 'Turning a feature off stops its background work right away. Your data stays — managed services, archives and history are untouched.'}
             </p>
             <FeaturePicker
               value={enabledModules}
@@ -53,26 +59,27 @@ export const SettingsPage = () => {
                   onChange={(v) => dispatch(setTheme(v))}
                 />
               </div>
-              <div className="flex items-center justify-between gap-4 py-3.5">
-                <div>
-                  <p className="text-sm font-medium text-fg">Default layout</p>
-                  <p className="text-xs text-fg-muted">
-                    How services are shown on the Services tab.
-                  </p>
+              {!isLinux && (
+                <div className="flex items-center justify-between gap-4 py-3.5">
+                  <div>
+                    <p className="text-sm font-medium text-fg">Default layout</p>
+                    <p className="text-xs text-fg-muted">
+                      How services are shown on the Services tab.
+                    </p>
+                  </div>
+                  <SegmentedControl
+                    ariaLabel="Default layout"
+                    value={layout}
+                    options={LAYOUT_OPTIONS}
+                    onChange={(v) => dispatch(setLayout(v))}
+                  />
                 </div>
-                <SegmentedControl
-                  ariaLabel="Default layout"
-                  value={layout}
-                  options={LAYOUT_OPTIONS}
-                  onChange={(v) => dispatch(setLayout(v))}
-                />
-              </div>
+              )}
             </div>
           </section>
 
-          <HomebrewStatusCard />
-
-          <ManagedServicesEditor />
+          {!isLinux && <HomebrewStatusCard />}
+          {!isLinux && <ManagedServicesEditor />}
         </div>
       </div>
     </div>

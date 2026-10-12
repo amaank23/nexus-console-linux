@@ -7,6 +7,7 @@ import { formatBytes, formatPercent } from '@/shared/lib/format';
 import { ProcessCell } from '@/features/ports/components/ProcessCell';
 import { KillConfirmDialog } from '@/features/ports/components/KillConfirmDialog';
 import type { PortDto } from '@/features/ports/api/ports.schema';
+import { useAppContext } from '@/shared/tauri';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function buildColumns(onKill: (p: PortDto) => void): ColumnDef<PortDto, any>[] {
@@ -84,7 +85,12 @@ function buildColumns(onKill: (p: PortDto) => void): ColumnDef<PortDto, any>[] {
 
 export const PortsTable = ({ ports }: { ports: PortDto[] }) => {
   const [killTarget, setKillTarget] = useState<PortDto | null>(null);
-  const columns = useMemo(() => buildColumns(setKillTarget), []);
+  const { data: context } = useAppContext();
+  const canKill = context?.platform === 'macos';
+  const columns = useMemo(
+    () => buildColumns(setKillTarget).filter((column) => canKill || column.id !== 'actions'),
+    [canKill],
+  );
 
   return (
     <>
@@ -95,11 +101,13 @@ export const PortsTable = ({ ports }: { ports: PortDto[] }) => {
         estimateRowHeight={52}
         emptyMessage="No listening ports found."
       />
-      <KillConfirmDialog
-        key={killTarget?.pid ?? 'none'}
-        target={killTarget}
-        onClose={() => setKillTarget(null)}
-      />
+      {canKill && (
+        <KillConfirmDialog
+          key={killTarget?.pid ?? 'none'}
+          target={killTarget}
+          onClose={() => setKillTarget(null)}
+        />
+      )}
     </>
   );
 };

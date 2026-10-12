@@ -4,6 +4,7 @@ import { usePorts } from '@/features/ports/api/usePorts';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { PortsToolbar } from '@/features/ports/components/PortsToolbar';
 import { PortsTable } from '@/features/ports/components/PortsTable';
+import { useAppContext } from '@/shared/tauri';
 
 const SKELETON_ROWS = Array.from({ length: 8 }, (_, i) => i);
 
@@ -22,6 +23,7 @@ const PortsTableSkeleton = () => (
 );
 
 export const PortsPage = () => {
+  const { data: context } = useAppContext();
   const [query, setQuery] = useState('');
   const [listeningOnly, setListeningOnly] = useState(true);
   const { data, isPending, isError, error, isFetching, refetch } = usePorts(listeningOnly);
@@ -62,6 +64,12 @@ export const PortsPage = () => {
           isFetching={isFetching}
         />
       </header>
+      {context?.platform === 'linux' && (
+        <p className="border-b border-border px-6 py-2 text-xs text-fg-muted">
+          Read-only port inspection. Only processes visible to your user are shown; process controls
+          are coming in a later update.
+        </p>
+      )}
 
       {/* Padded content + a bordered card frame, matching Services/Settings. */}
       <div className="min-h-0 flex-1 overflow-hidden p-6">

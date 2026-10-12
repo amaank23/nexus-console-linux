@@ -1,5 +1,6 @@
 use crate::context::AppContext;
 use crate::error::{AppError, AppResult};
+#[cfg(target_os = "macos")]
 use crate::util::{plist, validate};
 use portable_pty::{native_pty_system, Child, CommandBuilder, MasterPty, PtySize};
 use std::collections::HashMap;
@@ -231,42 +232,72 @@ fn lock(
 
 /// Server-side allowlist — JS passes a formula + kind, never a program. Resolves
 /// the client binary (or a login shell) / the `tail -f` log command.
+#[cfg(target_os = "linux")]
+fn linux_login_shell(candidate: Option<&str>) -> String {
+    use std::os::unix::fs::PermissionsExt;
+    candidate
+        .filter(|shell| {
+            let path = std::path::Path::new(shell);
+            path.is_absolute()
+                && path
+                    .metadata()
+                    .is_ok_and(|meta| meta.is_file() && meta.permissions().mode() & 0o111 != 0)
+        })
+        .unwrap_or("/bin/sh")
+        .into()
+}
+
 fn resolve_command(
     formula: &str,
     kind: &str,
     ctx: &AppContext,
 ) -> AppResult<(String, Vec<String>)> {
-    validate::validate_formula(formula)?;
-    // brew installs a tap formula under its bare name (opt/mongodb-community@7.0),
-    // so every path and client lookup below drops the `user/repo/` prefix.
-    let formula = validate::bare_formula(formula);
-    let prefix = ctx.brew_prefix.as_deref().unwrap_or("/opt/homebrew");
-    let base = formula.split('@').next().unwrap_or(formula);
-    let bin = |name: &str| format!("{prefix}/bin/{name}");
-
-    if kind == "logs" {
-        let plist_file = format!("{prefix}/opt/{formula}/homebrew.mxcl.{formula}.plist");
-        let log = std::fs::read_to_string(&plist_file)
-            .ok()
-            .and_then(|c| plist::log_path_from_plist(&c))
-            .unwrap_or_else(|| format!("{prefix}/var/log/{base}.log"));
-        return Ok(("tail".into(), vec!["-f".into(), log]));
+    #[cfg(target_os = "linux")]
+    {
+        let _ = (formula, ctx);
+        if kind != "cli" {
+            return Err(AppError::Forbidden(
+                "Service logs are not available on Linux yet.".into(),
+            ));
+        }
+        let candidate = std::env::var("SHELL").ok();
+        let shell = linux_login_shell(candidate.as_deref());
+        Ok((shell, vec!["-l".into()]))
     }
+    #[cfg(target_os = "macos")]
+    {
+        validate::validate_formula(formula)?;
+        // brew installs a tap formula under its bare name (opt/mongodb-community@7.0),
+        // so every path and client lookup below drops the `user/repo/` prefix.
+        let formula = validate::bare_formula(formula);
+        let prefix = ctx.brew_prefix.as_deref().unwrap_or("/opt/homebrew");
+        let base = formula.split('@').next().unwrap_or(formula);
+        let bin = |name: &str| format!("{prefix}/bin/{name}");
 
-    let client = match base {
-        "redis" | "valkey" => Some((bin("redis-cli"), vec![])),
-        // psql defaults to a DB named after the OS user, which usually doesn't
-        // exist — connect to the always-present `postgres` database instead.
-        "postgresql" | "postgres" => Some((bin("psql"), vec!["-d".into(), "postgres".into()])),
-        "mysql" | "mariadb" | "percona-server" => Some((bin("mysql"), vec![])),
-        "mongodb" | "mongodb-community" => Some((bin("mongosh"), vec![])),
-        _ => None,
-    };
-    match client {
-        Some((path, args)) if std::path::Path::new(&path).exists() => Ok((path, args)),
-        _ => {
-            let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".into());
-            Ok((shell, vec!["-l".into()]))
+        if kind == "logs" {
+            let plist_file = format!("{prefix}/opt/{formula}/homebrew.mxcl.{formula}.plist");
+            let log = std::fs::read_to_string(&plist_file)
+                .ok()
+                .and_then(|c| plist::log_path_from_plist(&c))
+                .unwrap_or_else(|| format!("{prefix}/var/log/{base}.log"));
+            return Ok(("tail".into(), vec!["-f".into(), log]));
+        }
+
+        let client = match base {
+            "redis" | "valkey" => Some((bin("redis-cli"), vec![])),
+            // psql defaults to a DB named after the OS user, which usually doesn't
+            // exist — connect to the always-present `postgres` database instead.
+            "postgresql" | "postgres" => Some((bin("psql"), vec!["-d".into(), "postgres".into()])),
+            "mysql" | "mariadb" | "percona-server" => Some((bin("mysql"), vec![])),
+            "mongodb" | "mongodb-community" => Some((bin("mongosh"), vec![])),
+            _ => None,
+        };
+        match client {
+            Some((path, args)) if std::path::Path::new(&path).exists() => Ok((path, args)),
+            _ => {
+                let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".into());
+                Ok((shell, vec!["-l".into()]))
+            }
         }
     }
 }
@@ -313,6 +344,28 @@ pub async fn pty_kill(id: String, mgr: State<'_, PtyManager>) -> AppResult<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    #[cfg(target_os = "linux")]
+    fn linux_shell_rejects_relative_missing_and_non_executable_paths() {
+        assert_eq!(linux_login_shell(Some("sh")), "/bin/sh");
+        assert_eq!(
+            linux_login_shell(Some("/does-not-exist/nexus-shell")),
+            "/bin/sh"
+        );
+        assert_eq!(linux_login_shell(Some("/etc/os-release")), "/bin/sh");
+        assert_eq!(linux_login_shell(Some("/bin/sh")), "/bin/sh");
+        assert_eq!(linux_login_shell(None), "/bin/sh");
+    }
+
+    #[test]
+    #[cfg(target_os = "linux")]
+    fn linux_does_not_resolve_macos_service_logs() {
+        let ctx = crate::context::discover();
+        assert!(resolve_command("redis", "logs", &ctx).is_err());
+        assert!(resolve_command("shell", "unknown", &ctx).is_err());
+        assert_eq!(resolve_command("shell", "cli", &ctx).unwrap().1, vec!["-l"]);
+    }
 
     #[test]
     fn take_utf8_holds_back_split_codepoint() {

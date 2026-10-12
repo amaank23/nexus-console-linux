@@ -1,6 +1,13 @@
 import { test, expect } from 'vitest';
 import { settingsReducer, setEnabledModules } from '@/shared/state/settingsSlice';
-import { ALL_MODULES, isTabVisible, sanitizeModules, visibleTabs } from './selectors';
+import {
+  ALL_MODULES,
+  availableModules,
+  effectiveModules,
+  isTabVisible,
+  sanitizeModules,
+  visibleTabs,
+} from './selectors';
 
 test('visibleTabs: only the enabled modules, registry order, Settings last', () => {
   expect(visibleTabs(['claude'])).toEqual(['archiver', 'settings']);
@@ -48,4 +55,31 @@ test('setEnabledModules: emptying the list is a no-op (last module can never go)
   const one = settingsReducer(undefined, setEnabledModules(['doctor']));
   const still = settingsReducer(one, setEnabledModules([]));
   expect(still.enabledModules).toEqual(['doctor']);
+});
+
+test('Linux hides unsupported modules even when persisted or Claude is installed', () => {
+  const enabled = availableModules(ALL_MODULES, {
+    claudeInstalled: true,
+    supportedModules: ['ports'],
+  });
+  expect(enabled).toEqual(['ports']);
+  expect(visibleTabs(enabled)).toEqual(['ports', 'settings']);
+});
+
+test('no modules are offered before platform capabilities have loaded', () => {
+  expect(availableModules(ALL_MODULES, { claudeInstalled: true, supportedModules: [] })).toEqual(
+    [],
+  );
+});
+
+test('a persisted macOS-only choice recovers to Linux-supported modules', () => {
+  expect(
+    effectiveModules(['doctor', 'claude'], { claudeInstalled: false, supportedModules: ['ports'] }),
+  ).toEqual(['ports']);
+});
+
+test('missing Claude does not silently enable Homebrew for a Claude-only macOS choice', () => {
+  expect(
+    effectiveModules(['claude'], { claudeInstalled: false, supportedModules: ALL_MODULES }),
+  ).toEqual([]);
 });

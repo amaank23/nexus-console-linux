@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Check } from 'lucide-react';
-import { MODULES, isModuleAvailable, useClaudeInstalled, type ModuleId } from '@/shared/modules';
+import { MODULES, isModuleAvailable, useModuleDependencies, type ModuleId } from '@/shared/modules';
 import { cn } from '@/shared/lib/cn';
 import type { FeaturePickerProps } from './FeaturePicker.types';
 
@@ -17,7 +17,7 @@ const MIN_MESSAGE = 'Keep at least one feature on.';
  * last feature is refused with an inline line instead of silently doing nothing
  * (the reducer refuses it too — this is the explanation, not the guard). */
 export const FeaturePicker = ({ value, onChange }: FeaturePickerProps) => {
-  const claudeInstalled = useClaudeInstalled();
+  const deps = useModuleDependencies();
   const [blocked, setBlocked] = useState(false);
 
   const toggle = (id: ModuleId) => {
@@ -33,8 +33,8 @@ export const FeaturePicker = ({ value, onChange }: FeaturePickerProps) => {
   return (
     <>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {MODULES.map((m) => {
-          const available = isModuleAvailable(m.id, { claudeInstalled });
+        {MODULES.filter((m) => deps.supportedModules.includes(m.id)).map((m) => {
+          const available = isModuleAvailable(m.id, deps);
           const checked = value.includes(m.id) && available;
           const Icon = m.icon;
           return (
@@ -70,7 +70,11 @@ export const FeaturePicker = ({ value, onChange }: FeaturePickerProps) => {
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-sm font-semibold text-fg">{m.label}</span>
-                    <span className="block text-xs text-fg-muted">{m.blurb}</span>
+                    <span className="block text-xs text-fg-muted">
+                      {deps.platform === 'linux' && m.id === 'ports'
+                        ? 'Inspect listening ports and visible processes.'
+                        : m.blurb}
+                    </span>
                   </span>
                   <span
                     aria-hidden
@@ -86,7 +90,7 @@ export const FeaturePicker = ({ value, onChange }: FeaturePickerProps) => {
                 <span className="border-t border-border pt-2.5 text-xs text-fg-subtle">
                   {available
                     ? (m.background ?? 'Nothing runs in the background.')
-                    : 'Claude Code not found on this Mac.'}
+                    : 'Claude Code not found on this machine.'}
                 </span>
               </span>
             </label>

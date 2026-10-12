@@ -1,5 +1,5 @@
-use std::path::Path;
-use std::process::Command;
+#[cfg(target_os = "macos")]
+use std::{path::Path, process::Command};
 
 /// Machine/runtime config discovered once at startup. brew* are `None` when
 /// Homebrew isn't found — the UI degrades to a "not detected" state.
@@ -11,6 +11,7 @@ pub struct AppContext {
     pub brew_prefix: Option<String>,
     pub brew_bin: Option<String>,
     pub brew_version: Option<String>,
+    pub supported_modules: Vec<String>,
 }
 
 /// `brew --version` result, resolved off the startup path — the subprocess costs
@@ -19,49 +20,70 @@ pub struct AppContext {
 #[derive(Default)]
 pub struct BrewVersion(pub std::sync::RwLock<Option<String>>);
 
-/// Arch-first brew prefix probe: Apple Silicon → /opt/homebrew, Intel → /usr/local.
-/// Honors HOMEBREW_PREFIX as a fallback. Never hardcode the prefix downstream.
+/// Discover available modules. Only macOS probes Homebrew prefixes.
 pub fn discover() -> AppContext {
     let platform = std::env::consts::OS.to_string();
     let arch = std::env::consts::ARCH.to_string();
 
-    let candidates: &[&str] = if arch == "aarch64" {
-        &["/opt/homebrew", "/usr/local"]
-    } else {
-        &["/usr/local", "/opt/homebrew"]
-    };
-
-    let mut brew_prefix = None;
-    let mut brew_bin = None;
-    for prefix in candidates {
-        let bin = format!("{prefix}/bin/brew");
-        if Path::new(&bin).exists() {
-            brew_prefix = Some((*prefix).to_string());
-            brew_bin = Some(bin);
-            break;
+    #[cfg(not(target_os = "macos"))]
+    {
+        AppContext {
+            platform,
+            arch,
+            brew_prefix: None,
+            brew_bin: None,
+            brew_version: None,
+            supported_modules: vec!["ports".into()],
         }
     }
-    if brew_bin.is_none() {
-        if let Ok(prefix) = std::env::var("HOMEBREW_PREFIX") {
+
+    #[cfg(target_os = "macos")]
+    {
+        let candidates: &[&str] = if arch == "aarch64" {
+            &["/opt/homebrew", "/usr/local"]
+        } else {
+            &["/usr/local", "/opt/homebrew"]
+        };
+
+        let mut brew_prefix = None;
+        let mut brew_bin = None;
+        for prefix in candidates {
             let bin = format!("{prefix}/bin/brew");
             if Path::new(&bin).exists() {
-                brew_prefix = Some(prefix);
+                brew_prefix = Some((*prefix).to_string());
                 brew_bin = Some(bin);
+                break;
             }
         }
-    }
+        if brew_bin.is_none() {
+            if let Ok(prefix) = std::env::var("HOMEBREW_PREFIX") {
+                let bin = format!("{prefix}/bin/brew");
+                if Path::new(&bin).exists() {
+                    brew_prefix = Some(prefix);
+                    brew_bin = Some(bin);
+                }
+            }
+        }
 
-    AppContext {
-        platform,
-        arch,
-        brew_prefix,
-        brew_bin,
-        // Resolved async after startup (see BrewVersion) — never block paint on it.
-        brew_version: None,
+        AppContext {
+            platform,
+            arch,
+            brew_prefix,
+            brew_bin,
+            // Resolved async after startup (see BrewVersion) — never block paint on it.
+            brew_version: None,
+            supported_modules: vec![
+                "homebrew".into(),
+                "ports".into(),
+                "doctor".into(),
+                "claude".into(),
+            ],
+        }
     }
 }
 
 /// Blocking `brew --version` probe — call from spawn_blocking, never from setup().
+#[cfg(target_os = "macos")]
 pub fn resolve_brew_version(bin: &str) -> Option<String> {
     let out = Command::new(bin).arg("--version").output().ok()?;
     if !out.status.success() {
@@ -87,6 +109,12 @@ mod tests {
             brew_prefix: Some("/opt/homebrew".into()),
             brew_bin: Some("/opt/homebrew/bin/brew".into()),
             brew_version: Some("6.0.10".into()),
+            supported_modules: vec![
+                "homebrew".into(),
+                "ports".into(),
+                "doctor".into(),
+                "claude".into(),
+            ],
         };
         let v = serde_json::to_value(&ctx).unwrap();
         assert_eq!(v["platform"], "macos");
@@ -98,6 +126,7 @@ mod tests {
     // brew may be absent. Run with: cargo test -- --ignored
     #[test]
     #[ignore]
+    #[cfg(target_os = "macos")]
     fn discovers_local_brew() {
         let ctx = discover();
         assert_eq!(ctx.platform, "macos");
@@ -119,8 +148,20 @@ mod tests {
             brew_prefix: None,
             brew_bin: None,
             brew_version: None,
+            supported_modules: vec!["ports".into()],
         };
         let v = serde_json::to_value(&ctx).unwrap();
         assert!(v["brewPrefix"].is_null());
+    }
+
+    #[test]
+    #[cfg(target_os = "linux")]
+    fn linux_never_advertises_macos_modules() {
+        let ctx = discover();
+        assert_eq!(ctx.platform, "linux");
+        assert_eq!(ctx.supported_modules, vec!["ports"]);
+        assert!(ctx.brew_bin.is_none());
+        let json = serde_json::to_value(ctx).unwrap();
+        assert_eq!(json["supportedModules"], serde_json::json!(["ports"]));
     }
 }

@@ -1,14 +1,21 @@
+#[cfg(target_os = "macos")]
 pub mod archiver;
 pub mod context;
+#[cfg(target_os = "macos")]
 pub mod doctor;
+#[cfg(target_os = "macos")]
 pub mod packages;
 pub mod ports;
+#[cfg(target_os = "macos")]
 pub mod services;
+#[cfg(target_os = "macos")]
 pub mod vscode;
 
+#[cfg(target_os = "macos")]
 use crate::error::{AppError, AppResult};
 
 /// Run blocking fs/db work off the main thread — shared by all doctor commands.
+#[cfg(target_os = "macos")]
 pub(crate) async fn blocking<T: Send + 'static>(
     f: impl FnOnce() -> AppResult<T> + Send + 'static,
 ) -> AppResult<T> {
@@ -21,6 +28,7 @@ pub(crate) async fn blocking<T: Send + 'static>(
 /// of these, with a proper message. Living in Rust means the frontend can
 /// never bypass it. `destructive: true` renders the warning style. Call from
 /// a blocking context only — `blocking_show` parks the thread until answered.
+#[cfg(target_os = "macos")]
 pub(crate) fn confirm_action(
     app: &tauri::AppHandle,
     title: &str,
@@ -61,6 +69,7 @@ pub(crate) fn confirm_action(
 /// `brew trust --tap <tap>`, which writes a user-level config file — no sudo,
 /// no admin prompt. One trust unblocks every later brew command for that tap.
 #[tauri::command]
+#[cfg(target_os = "macos")]
 pub async fn trust_tap(
     tap: String,
     ctx: tauri::State<'_, crate::context::AppContext>,
@@ -104,6 +113,7 @@ pub async fn trust_tap(
 /// Returns `true` if confirmed, `false` if cancelled — the frontend gates the
 /// bulk mutation on it. Off the async runtime via `blocking` (sheet parks it).
 #[tauri::command]
+#[cfg(target_os = "macos")]
 pub async fn confirm_bulk(
     app: tauri::AppHandle,
     title: String,

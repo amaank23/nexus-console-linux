@@ -1,8 +1,9 @@
 import { useEffect, useRef } from 'react';
+import { nanoid } from '@reduxjs/toolkit';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
-import { openPty, writePty, resizePty, killPty, type PtyEvent } from '@/shared/tauri';
+import { openPty, writePty, resizePty, killPty, IpcError, type PtyEvent } from '@/shared/tauri';
 import { useResolvedTheme } from '@/shared/state/useResolvedTheme';
 import { xtermTheme } from '@/features/terminal/utils/xtermTheme';
 import type { TerminalSession } from '@/shared/state/terminalsSlice';
@@ -21,6 +22,7 @@ export const XtermView = ({
   const hostRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<Terminal | null>(null);
   const fitRef = useRef<FitAddon | null>(null);
+  const ptyIdRef = useRef<string | null>(null);
   const theme = useResolvedTheme();
 
   // Create the terminal + PTY once per session; kill the PTY on unmount.
@@ -42,24 +44,40 @@ export const XtermView = ({
     termRef.current = term;
     fitRef.current = fit;
 
-    const dataSub = term.onData((d) => void writePty(session.id, d));
+    let disposed = false;
+    // A distinct backend id per mount prevents StrictMode's first cleanup from
+    // terminating the replacement shell while an earlier open is resolving.
+    const ptyId = `${session.id}-${nanoid()}`;
+    ptyIdRef.current = ptyId;
+    const dataSub = term.onData((d) => void writePty(ptyId, d));
     void openPty(
       {
-        id: session.id,
+        id: ptyId,
         formula: session.formula,
         kind: session.kind,
         cols: term.cols,
         rows: term.rows,
       },
       (e: PtyEvent) => {
+        if (disposed) return;
         if (e.type === 'output') term.write(e.data);
         else term.write('\r\n\x1b[90m[process exited]\x1b[0m\r\n');
       },
-    );
+    )
+      .then(() => {
+        // A tab can close while openPty is still starting the shell.
+        if (disposed) void killPty(ptyId);
+      })
+      .catch((error: unknown) => {
+        if (!disposed)
+          term.write(`\r\nUnable to open terminal: ${IpcError.from(error).message}\r\n`);
+      });
 
     return () => {
+      disposed = true;
       dataSub.dispose();
-      void killPty(session.id);
+      void killPty(ptyId);
+      if (ptyIdRef.current === ptyId) ptyIdRef.current = null;
       term.dispose();
     };
   }, [session.id, session.formula, session.kind]);
@@ -80,7 +98,8 @@ export const XtermView = ({
       if (term.cols !== prevCols || term.rows !== prevRows) {
         prevCols = term.cols;
         prevRows = term.rows;
-        void resizePty(session.id, term.cols, term.rows);
+        const id = ptyIdRef.current;
+        if (id) void resizePty(id, term.cols, term.rows);
       }
     };
     const onResize = () => {

@@ -18,6 +18,7 @@ export {
 } from './selectors';
 export {
   useEnabledModules,
+  useModuleDependencies,
   useModuleAvailable,
   useModuleEnabled,
   useVisibleNav,

@@ -27,7 +27,7 @@ pub async fn list_ports(listening_only: bool) -> AppResult<Vec<PortDto>> {
 
 /// Testable core (blocking). Never call directly from a sync command — it shells out.
 fn collect_ports(listening_only: bool) -> AppResult<Vec<PortDto>> {
-    let mut rows = lsof::parse_lsof_fields(&run_lsof(listening_only));
+    let mut rows = lsof::parse_lsof_fields(&run_lsof(listening_only)?);
 
     // Merge IPv4/IPv6 duplicates of the same (pid, port).
     let mut seen = HashSet::new();
@@ -67,6 +67,7 @@ fn collect_ports(listening_only: bool) -> AppResult<Vec<PortDto>> {
 // async so the sudo path's `osascript … with administrator privileges` (a
 // blocking macOS auth dialog) doesn't stall the main-thread event loop.
 #[tauri::command]
+#[cfg(target_os = "macos")]
 pub async fn kill_process(pid: u32, force: bool, sudo: bool) -> AppResult<()> {
     if pid < 2 {
         return Err(AppError::Forbidden("refusing to signal pid < 2".into()));
@@ -111,16 +112,23 @@ pub async fn kill_process(pid: u32, force: bool, sudo: bool) -> AppResult<()> {
     }
 }
 
-fn run_lsof(listening_only: bool) -> String {
+fn run_lsof(listening_only: bool) -> AppResult<String> {
     let mut args = vec!["-nP", "-iTCP", "-FpcLtn"];
     if listening_only {
         args.push("-sTCP:LISTEN");
     }
-    Command::new("lsof")
+    let output = Command::new("lsof")
         .args(&args)
         .output()
-        .map(|o| String::from_utf8_lossy(&o.stdout).into_owned())
-        .unwrap_or_default()
+        .map_err(|e| AppError::Shell(format!("Cannot run lsof: {e}")))?;
+    // lsof exits 1 with no diagnostics when no visible sockets match.
+    let no_matches = output.status.code() == Some(1) && output.stderr.is_empty();
+    if !(output.status.success() || no_matches) {
+        return Err(AppError::Shell(
+            String::from_utf8_lossy(&output.stderr).trim().to_string(),
+        ));
+    }
+    Ok(String::from_utf8_lossy(&output.stdout).into_owned())
 }
 
 fn run_ps(ids: &[String]) -> String {
@@ -134,6 +142,18 @@ fn run_ps(ids: &[String]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    #[ignore = "requires local lsof/process visibility"]
+    #[cfg(target_os = "linux")]
+    fn discovers_disposable_linux_listener() {
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let rows = collect_ports(true).unwrap();
+        assert!(rows
+            .iter()
+            .any(|row| row.pid == std::process::id() && row.port == port));
+    }
 
     // Full lsof + ps + dedup against the real machine. Ignored in CI.
     #[test]

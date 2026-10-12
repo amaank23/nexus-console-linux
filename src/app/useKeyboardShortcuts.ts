@@ -2,6 +2,8 @@ import { useEffect, useRef } from 'react';
 import { useVisibleTabs } from '@/shared/modules';
 import { useAppDispatch } from '@/shared/state/hooks';
 import { setActiveTab } from '@/shared/state/uiSlice';
+import { useAppContext } from '@/shared/tauri';
+import { openTerminal } from '@/shared/state/terminalsSlice';
 
 /** Global macOS-style shortcuts: Cmd+1..N switch tabs in sidebar order, Cmd+,
  * opens Settings (the standard "Preferences" shortcut), Cmd+F focuses the active
@@ -13,6 +15,9 @@ import { setActiveTab } from '@/shared/state/uiSlice';
 export function useKeyboardShortcuts(): void {
   const dispatch = useAppDispatch();
   const visibleTabs = useVisibleTabs();
+  const { data: context } = useAppContext();
+  const platformRef = useRef(context?.platform);
+  platformRef.current = context?.platform;
   // Read through a ref so the listener is registered once, not re-subscribed on
   // every render (the hook returns a fresh array each time).
   const tabsRef = useRef(visibleTabs);
@@ -20,7 +25,15 @@ export function useKeyboardShortcuts(): void {
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (!e.metaKey || e.altKey || e.ctrlKey) return;
+      const mac = platformRef.current === 'macos';
+      if (e.altKey || (mac ? !e.metaKey || e.ctrlKey : !e.ctrlKey || e.metaKey)) return;
+      // Let terminal programs receive their own Ctrl shortcuts.
+      if (e.target instanceof Element && e.target.closest('.xterm')) return;
+      if (!mac && e.key === '`') {
+        e.preventDefault();
+        dispatch(openTerminal({ formula: 'shell', title: 'Terminal', kind: 'cli' }));
+        return;
+      }
 
       const tabs = tabsRef.current;
       const nth = Number(e.key);

@@ -4,5 +4,6 @@ import type { ModuleId } from '@/shared/modules';
 export const PRESETS: { label: string; modules: ModuleId[] }[] = [
   { label: 'Everything', modules: ['homebrew', 'ports', 'doctor', 'claude'] },
   { label: 'Homebrew only', modules: ['homebrew'] },
+  { label: 'Ports only', modules: ['ports'] },
   { label: 'Claude Chats only', modules: ['claude'] },
 ];
