@@ -33,7 +33,7 @@ pub fn discover() -> AppContext {
             brew_prefix: None,
             brew_bin: None,
             brew_version: None,
-            supported_modules: vec!["ports".into()],
+            supported_modules: vec!["systemd".into(), "ports".into()],
         }
     }
 
@@ -159,9 +159,12 @@ mod tests {
     fn linux_never_advertises_macos_modules() {
         let ctx = discover();
         assert_eq!(ctx.platform, "linux");
-        assert_eq!(ctx.supported_modules, vec!["ports"]);
+        assert_eq!(ctx.supported_modules, vec!["systemd", "ports"]);
         assert!(ctx.brew_bin.is_none());
         let json = serde_json::to_value(ctx).unwrap();
-        assert_eq!(json["supportedModules"], serde_json::json!(["ports"]));
+        assert_eq!(
+            json["supportedModules"],
+            serde_json::json!(["systemd", "ports"])
+        );
     }
 }

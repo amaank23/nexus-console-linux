@@ -66,6 +66,15 @@ test('Linux hides unsupported modules even when persisted or Claude is installed
   expect(visibleTabs(enabled)).toEqual(['ports', 'settings']);
 });
 
+test('Linux services expose only the scoped service page, without Homebrew package or session tabs', () => {
+  const enabled = availableModules(ALL_MODULES, {
+    claudeInstalled: true,
+    supportedModules: ['systemd', 'ports'],
+  });
+  expect(enabled).toEqual(['systemd', 'ports']);
+  expect(visibleTabs(enabled)).toEqual(['services', 'ports', 'settings']);
+});
+
 test('no modules are offered before platform capabilities have loaded', () => {
   expect(availableModules(ALL_MODULES, { claudeInstalled: true, supportedModules: [] })).toEqual(
     [],

@@ -7,6 +7,8 @@ mod context;
 #[cfg(target_os = "macos")]
 mod doctor;
 mod error;
+#[cfg(target_os = "linux")]
+mod linux;
 mod pty;
 #[cfg(target_os = "macos")]
 mod quit;
@@ -140,6 +142,7 @@ pub fn run() {
     #[cfg(target_os = "linux")]
     let builder = builder.invoke_handler(tauri::generate_handler![
         commands::context::get_app_context,
+        commands::linux_services::list_systemd_services,
         commands::ports::list_ports,
         pty::pty_open,
         pty::pty_write,

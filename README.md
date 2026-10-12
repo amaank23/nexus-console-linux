@@ -6,7 +6,7 @@ This project adapts [xDAnkit/Nexus-Console](https://github.com/xDAnkit/Nexus-Con
 
 ## Current status
 
-The initial Linux desktop foundation is implemented: platform-specific build configuration, capability-based navigation, read-only TCP port inspection, a generic terminal, and Settings. macOS integrations are isolated from Linux startup and command registration.
+The Linux desktop foundation includes platform-specific build configuration, capability-based navigation, read-only systemd service discovery and TCP port inspection, a generic terminal, and Settings. macOS integrations are isolated from Linux startup and command registration.
 
 The app builds and launches on Pop!_OS 22.04. Frontend checks, native compilation, Rust tests, and Clippy pass. Service/package controls, process termination, and Linux tray integration are still pending.
 
@@ -69,9 +69,17 @@ npm run release       # Linux .deb build; pending local verification
 
 `npm run setup` selects the read-only Linux checker on Linux. Do not run `scripts/setup.sh` directly there; it is the original macOS installer. Browser-only Vite development does not provide Rust operations.
 
-Verified locally: TypeScript, lint, formatting, 50 frontend tests, production frontend build, native `cargo check`, 13 standard Rust tests, Clippy with warnings denied, and separate disposable-listener and PTY smoke tests. The native window displays live TCP ports and Linux Settings; full interactive terminal/lifecycle QA and `.deb` packaging remain separate release checks.
+Verified locally: TypeScript, lint, formatting, 58 frontend tests, production frontend build, native compilation, 21 standard Rust tests, Clippy with warnings denied, and separate read-only systemd discovery, disposable-listener, and PTY smoke tests. Full interactive terminal/lifecycle QA and `.deb` packaging remain separate release checks.
 
-On Linux, Control replaces Command for navigation shortcuts. Use `Ctrl+1`/`Ctrl+2` for the visible tabs, `Ctrl+,` for Settings, and Control + backtick or the sidebar button to open the terminal.
+On Linux, Control replaces Command for navigation shortcuts. Use `Ctrl+1` through `Ctrl+3` for the visible tabs, `Ctrl+,` for Settings, and Control + backtick or the sidebar button to open the terminal. Existing installations can enable Services in Settings → Features.
+
+### Service discovery
+
+The Services screen lists system and current-user units, with scope, runtime state, enablement, optional process/resource counters, and search/state filters. Enablement is separate from running state; an active oneshot service can show `exited`. CPU time is cumulative, and application health remains unknown.
+
+Discovery merges installed unit files with runtime properties, retaining aliases, templates, and transient services. Installed units whose runtime state was not observed show **Not loaded**, rather than being assumed inactive. A missing user bus or a failed query produces a scope-specific diagnostic and preserves any successfully discovered units. Queries run only while the page is mounted, with polling limited to the focused Services tab at ten-second intervals.
+
+The local read-only integration test found 307 system and 125 user unit entries on Pop!_OS 22.04; counts change with the machine's session. Commands have timeouts and output limits. This milestone exposes no service mutations, administrator helper, boot enablement changes, or service cleanup on app exit.
 
 ## Project documents
 

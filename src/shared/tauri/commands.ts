@@ -4,6 +4,7 @@ export const CMD = {
   TRUST_TAP: 'trust_tap',
   GET_APP_CONTEXT: 'get_app_context',
   LIST_SERVICES: 'list_services',
+  LIST_SYSTEMD_SERVICES: 'list_systemd_services',
   START_SERVICE: 'start_service',
   STOP_SERVICE: 'stop_service',
   RESTART_SERVICE: 'restart_service',

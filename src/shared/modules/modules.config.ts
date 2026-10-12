@@ -9,8 +9,8 @@ import {
 } from 'lucide-react';
 import type { Tab } from '@/shared/state/uiSlice';
 
-/** The four things this app actually is. Order is nav order. */
-export const MODULE_IDS = ['homebrew', 'ports', 'doctor', 'claude'] as const;
+/** Platform capabilities decide which modules are offered. Order is nav order. */
+export const MODULE_IDS = ['homebrew', 'systemd', 'ports', 'doctor', 'claude'] as const;
 export type ModuleId = (typeof MODULE_IDS)[number];
 
 /** What a module needs on this Mac to be offered at all. Only Claude Code
@@ -55,6 +55,14 @@ export const MODULES: ModuleDef[] = [
     ],
     blurb: 'Services, packages and versions.',
     background: 'Checks Homebrew every few seconds and keeps the menu-bar count live.',
+  },
+  {
+    id: 'systemd',
+    label: 'Services',
+    icon: LayoutGrid,
+    nav: [{ tab: 'services', label: 'Services', icon: LayoutGrid }],
+    blurb: 'Inspect system and user systemd services.',
+    background: 'Refreshes service state while the Services tab is open.',
   },
   {
     id: 'ports',

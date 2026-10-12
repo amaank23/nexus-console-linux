@@ -22,6 +22,7 @@ Only mark an item complete after its output has been verified. Use PLAN.md as th
 
 - [x] Add platform capability discovery and isolate existing macOS startup/command registration.
 - [ ] Add typed service/package adapters, retaining platform-selected macOS implementations.
+- [x] Add the typed read-only systemd adapter and scoped IPC schemas, retaining the macOS service implementation.
 - [ ] Align frontend types and terminology with the Linux adapters.
 - [ ] Implement and validate the root-owned helper and polkit policy for allowed administrator operations.
 - [ ] Verify invalid requests and canceled authentication cause no mutation in a disposable environment.
@@ -29,11 +30,15 @@ Only mark an item complete after its output has been verified. Use PLAN.md as th
 ## 3. Services and ports
 
 - [ ] Implement system/user service discovery and explicit start, stop, and restart actions.
-- [ ] Show accurate unit states, optional metrics, and unknown application health honestly.
+- [x] Implement read-only system/user unit discovery, including installed units, aliases, templates, and transient services.
+- [x] Show observed unit states, optional metrics, unknown health, and explicit incomplete/unavailable scope diagnostics.
+- [ ] Implement validated, explicit start, stop, and restart actions.
 - [x] Establish read-only Linux TCP listening-port/process discovery with an explicit visibility limitation.
 - [ ] Extend port discovery with detailed permission-limited states and any additional protocol support required for release.
 - [ ] Add validated process termination, explicit force kill, and identity checks.
 - [x] Verify read-only discovery using a disposable local TCP listener.
+- [x] Verify read-only systemd discovery against both local buses on Pop!_OS 22.04.
+- [x] Launch the updated native app and inspect the scoped Services table on Pop!_OS 22.04.
 - [ ] Verify service actions using disposable user services and process controls using test listeners.
 
 ## 4. Packages
@@ -55,6 +60,7 @@ Only mark an item complete after its output has been verified. Use PLAN.md as th
 
 - [ ] Add meaningful parser, validation, permissions, transaction, and failure-path tests.
 - [x] Run TypeScript checks, frontend tests, Rust tests, and Clippy for the initial Linux foundation; rerun affected checks for subsequent features.
+- [x] Verify systemd parsing, alias merging, missing metrics/buses, command failures, output limits, and subprocess timeouts.
 - [x] Configure Linux CI and retain upstream macOS validation; remote results remain to be verified.
 - [ ] Build a `.deb` containing the protected helper and polkit policy.
 - [ ] Verify clean install, launch, removal, and desktop behavior on supported environments.

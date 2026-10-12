@@ -35,7 +35,7 @@ export const SettingsPage = () => {
             <h2 className="text-base font-semibold text-fg">Features</h2>
             <p className="mt-1 mb-4 text-xs text-fg-muted">
               {isLinux
-                ? 'Ports and the terminal are available. Service and package management are coming in a later update.'
+                ? 'Inspect services and ports, or open a terminal. Service controls and package management are coming in a later update.'
                 : 'Turning a feature off stops its background work right away. Your data stays — managed services, archives and history are untouched.'}
             </p>
             <FeaturePicker

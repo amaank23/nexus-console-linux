@@ -3,6 +3,8 @@ pub mod archiver;
 pub mod context;
 #[cfg(target_os = "macos")]
 pub mod doctor;
+#[cfg(target_os = "linux")]
+pub mod linux_services;
 #[cfg(target_os = "macos")]
 pub mod packages;
 pub mod ports;
@@ -11,11 +13,9 @@ pub mod services;
 #[cfg(target_os = "macos")]
 pub mod vscode;
 
-#[cfg(target_os = "macos")]
 use crate::error::{AppError, AppResult};
 
 /// Run blocking fs/db work off the main thread — shared by all doctor commands.
-#[cfg(target_os = "macos")]
 pub(crate) async fn blocking<T: Send + 'static>(
     f: impl FnOnce() -> AppResult<T> + Send + 'static,
 ) -> AppResult<T> {
