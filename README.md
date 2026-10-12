@@ -1,3 +1,64 @@
+# Nexus Console for Linux
+
+A local desktop utility for developers to manage services, packages, listening ports, and terminals on Ubuntu and Pop!_OS.
+
+This project adapts [xDAnkit/Nexus-Console](https://github.com/xDAnkit/Nexus-Console), reusing its React and Tauri foundation while replacing macOS integrations with Linux backends.
+
+## Current status
+
+Fork and documentation setup complete. Upstream source has been imported, but Linux functionality has not been implemented or validated. Dependencies have not been installed. The imported app still targets macOS.
+
+## First release
+
+- List system and user systemd services and start, stop, or restart them.
+- Browse installed APT packages, search repositories, inspect package details, and apply confirmed package changes.
+- Inspect listening ports and terminate processes with explicit controls.
+- Use an embedded terminal with the user's shell.
+- Configure modules, desktop notifications, and optional close-to-tray behavior.
+
+Doctor health checks, cleanup, Claude chat archiving, Fedora/Arch support, and other package managers are deferred.
+
+## Planned stack and platform
+
+- React, TypeScript, and Tailwind CSS for the interface.
+- Tauri 2 and Rust for desktop integration and operating-system access.
+- systemd for services; APT and dpkg-query for packages.
+- xterm.js and portable-pty for the terminal.
+- A narrowly scoped privileged helper authenticated with polkit for administrator operations.
+
+Initial targets: Ubuntu and Pop!_OS 22.04/24.04 on x86_64, where those releases are available. The primary development machine is Pop!_OS 22.04. Distribution and desktop compatibility must be verified before release. Initial delivery will be a `.deb` package.
+
+The app will keep settings and operation history locally, without accounts, telemetry, or a cloud backend. Package-manager operations may access configured repositories.
+
+## Development setup
+
+Linux setup and build commands are pending verification. Do not treat upstream macOS setup scripts as Linux instructions.
+
+## Project documents
+
+- [AGENTS.md](AGENTS.md): development conventions and agent instructions.
+- [PLAN.md](PLAN.md): agreed architecture, behavior, and release criteria.
+- [TASKS.md](TASKS.md): phased implementation checklist.
+
+## Upstream attribution
+
+Upstream Nexus Console is MIT licensed, with copyright attributed to Vidhya Skill School. Its complete [license and copyright notice](LICENSE) are preserved.
+
+Imported upstream commit: `3f621dbcbdd0c258f4eedddb6d6a63839df87a16`.
+
+## Fork workflow
+
+- Fork: [amaank23/nexus-console-linux](https://github.com/amaank23/nexus-console-linux) (`origin`).
+- Original project: [xDAnkit/Nexus-Console](https://github.com/xDAnkit/Nexus-Console) (`upstream`).
+- Development branch: `feat/linux-support`.
+- `main` starts at the imported upstream commit. Review upstream updates before merging them into the development branch.
+
+## Upstream macOS documentation
+
+The following documentation describes the imported macOS app. Its setup commands and feature descriptions do not establish Linux support.
+
+---
+
 # Nexus Console
 
 Your Mac's local dev setup, in one window.
